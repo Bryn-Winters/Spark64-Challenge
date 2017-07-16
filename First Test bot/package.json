@@ -1,0 +1,24 @@
+{
+  "name": "first-test-bot",
+  "version": "1.0.0",
+  "description": "First go at creating a node.js bot.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bryn-Winters/Spark64-Challenge/First-test-bot"
+  },
+  "keywords": [
+    "node.js",
+    "chatbot",
+    "bot"
+  ],
+  "author": "Bryn Winters",
+  "license": "ISC",
+  "dependencies": {
+    "botbuilder": "^3.8.4",
+    "restify": "^5.0.0"
+  }
+}
