@@ -3,6 +3,8 @@
 
 var restify = require('restify');
 var builder = require('botbuilder');
+var request = require('request');
+var http = require('http');
 
 // Setup Restify Server
 var server = restify.createServer();
@@ -19,8 +21,6 @@ var connector = new builder.ChatConnector({
 // Listen for messages from users 
 server.post('/api/messages', connector.listen());
 
-
-
 // This bot ensures user's profile is up to date. Currently it just asks for the user's name.
 var bot = new builder.UniversalBot(connector, [
     function (session) {
@@ -32,29 +32,63 @@ var bot = new builder.UniversalBot(connector, [
     }*/
 ]);
 
-//This function will be built later to enquire about the weather
-
-/*bot.dialog('greetuser', [
-
-function(session, args, next) {
-    session.send("Hi!");
-    session.send("Would you like to know the weather in your city?");
-}*/
-
 //This function asks for the user's name and greets them.
 bot.dialog('greetuser', [
     // Step 1
     function (session) {
-        builder.Prompts.text(session, 'Hi! What is your name?');
+        builder.Prompts.text(session, 'Hi! Would you like to know the weather in your city?');
+        //builder.Prompts.text(session, 'Would your like to know the weather in your city?');
     },
     // Step 2
     function (session, results) {
-        session.endDialog('Hello %s!', results.response);
-    }
-//]);
+        if (('yes' || 'Yes' )== results.response) {
+            
+            builder.Prompts.text(session, 'Please enter the name of your city:');
+
+            //session.endDialog('Hello %s!', results.response);
+        }else {
+            //builder.Prompts.text('Okay');
+            session.endDialog('Okay, Goodbye!');
+            //next(); // Skip if we already have this info.
+        }
+    },
+
+    function (session, results) {
+
+        city = results.response;
+        //city = 'New York';
+        var request = http.get('http://api.openweathermap.org/data/2.5/weather?q='+ city + '&units=metric&APPID=476166aba86f67e20fbfdf8b1e394f84', function(response) {
+            var body = '';
+            //Read the data
+            response.on('data', function(chunk) {
+                 body += chunk;
+            });
+
+            response.on('end', function() {
+                if (response.statusCode === 200) {
+                    try {
+                    //Parse the data
+                    var weatherAPI = JSON.parse(body);
+
+                    //Print the data
+                    builder.Prompts.text(session,'In ' + weatherAPI.name + ' the cloudiness is ' + weatherAPI.clouds.all + '%, and it is ' + weatherAPI.main.temp + ' degrees.');
+
+                    } catch(error) {
+                        //Parse error
+                        printError(error);
+                    }
+                } else  {
+                    //Status Code error
+                    printError({message: 'There was an error getting the weather from ' + city + '. (' + http.STATUS_CODES[response.statusCode] + ')'});
+                }
+            });   
+        });
+    },
+
+    
 
 
-//Let over logging in function from another bot, may be useful later on
+//Left over logging in function from another bot, may be useful later on
 
     /*function (session, args, next) {
         session.dialogData.profile = args || {}; // Set the profile or create the object.
@@ -83,3 +117,7 @@ bot.dialog('greetuser', [
         session.endDialogWithResult({ response: session.dialogData.profile });
     }*/
 ]);
+
+function printError(error) {
+        console.error(error.message);
+    };
