@@ -1,0 +1,26 @@
+{
+  "name": "basic-prompt-bot",
+  "version": "1.0.0",
+  "description": "A bot that will respond when greeted and ask the user if they what to know the weather for their city",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bryn-Winters/Spark64-Challenge/Basic-Prompt-bot"
+  },
+  "keywords": [
+    "node",
+    "node.js",
+    "chatbot",
+    "bot",
+    "weather"
+  ],
+  "author": "Bryn Winters",
+  "license": "ISC",
+  "dependencies": {
+    "botbuilder": "^3.8.4",
+    "restify": "^5.0.0"
+  }
+}
