@@ -1,10 +1,16 @@
-//Basic Bot that can echo back any input, code obtained from microsoft: https://docs.microsoft.com/en-us/bot-framework/nodejs/bot-builder-nodejs-dialog-waterfall
-//Uses botbuilder and restify packages
+// Initial code obtained from microsoft: https://docs.microsoft.com/en-us/bot-framework/nodejs/bot-builder-nodejs-dialog-waterfall
+// Initial API call code obtained from here: https://teamtreehouse.com/community/im-trying-to-make-weather-app-with-nodejs-but-it-doesnt-work
+// Uses botbuilder and restify packages
 
 var restify = require('restify');
 var builder = require('botbuilder');
 var request = require('request');
 var http = require('http');
+
+// Print errors to the console if they arise
+function printError(error) {
+    console.error(error.message);
+};
 
 // Setup Restify Server
 var server = restify.createServer();
@@ -21,103 +27,76 @@ var connector = new builder.ChatConnector({
 // Listen for messages from users 
 server.post('/api/messages', connector.listen());
 
-// This bot ensures user's profile is up to date. Currently it just asks for the user's name.
+// This part of the bot greets the user if they say 'hi' or 'hello', then begins the weather questioning portion
 var bot = new builder.UniversalBot(connector, [
     function (session) {
-        session.beginDialog('greetuser', session.userData.profile);
+        if ('hi' == session.message.text || 'hello' == session.message.text) {
+            
+            builder.Prompts.text(session, 'Hi!');
+            // This dialog is ended so the bot will only greet the user once per conversation
+            session.endDialog();
+            // This firstrun variable is used to alter the question in the next section after it is asked once
+            session.userData.firstRun = true;
+            session.beginDialog('weatherbot', session.userData.profile);
+        } else {
+            // Does nothing if the user doesn't say 'hi' or 'hello'
+        }  
     },
-    /*function (session, results) {
-        session.userData.profile = results.response; // Save user profile.
-        session.send('Hello %(name)s! I love %(company)s!', session.userData.profile);
-    }*/
 ]);
 
-//This function asks for the user's name and greets them.
-bot.dialog('greetuser', [
-    // Step 1
+//This function asks the user if they would like to know the weather in their city, prompts them for a city name, and gives them the weather.
+bot.dialog('weatherbot', [
+    // This Function asks about the weather, and the dialog changes if the inital question has already been asked
     function (session) {
-        builder.Prompts.text(session, 'Hi! Would you like to know the weather in your city?');
-        //builder.Prompts.text(session, 'Would your like to know the weather in your city?');
+        if(session.userData.firstRun){ // Initial question
+            builder.Prompts.text(session, 'Would you like to know the weather in your city?');
+            session.userData.firstRun = false;
+        }else{  // Question asked when the bot loops
+            builder.Prompts.text(session, 'Would you like to know the weather in another city?');
+        }
     },
-    // Step 2
+    // If the user answers 'Yes' or 'yes' when asked if the want to know the weather, this function prompts them to enter a city name
     function (session, results) {
-        if (('yes' || 'Yes' )== results.response) {
-            
+        if ('yes' == results.response || 'Yes' == results.response) {         
             builder.Prompts.text(session, 'Please enter the name of your city:');
-
-            //session.endDialog('Hello %s!', results.response);
         }else {
-            //builder.Prompts.text('Okay');
+            // If the user says anything else (presumably no), the bot says goodbye and ends the conversation
             session.endDialog('Okay, Goodbye!');
-            //next(); // Skip if we already have this info.
         }
     },
 
     function (session, results) {
 
         city = results.response;
-        //city = 'New York';
+        // This is the api call to openweathermap using the name of the city that the user entered
         var request = http.get('http://api.openweathermap.org/data/2.5/weather?q='+ city + '&units=metric&APPID=476166aba86f67e20fbfdf8b1e394f84', function(response) {
             var body = '';
-            //Read the data
-            response.on('data', function(chunk) {
-                 body += chunk;
+            // This reads in the JSON packet that is returned and saves adds it to an empty variable as it is received for later decoding
+            response.on('data', function(chunk) {    
+                    body += chunk;
             });
-
+            // Once the end of the JSON packet is registered as having been received, it can the parsed in the information used
             response.on('end', function() {
                 if (response.statusCode === 200) {
                     try {
-                    //Parse the data
+                    // Parse the data
                     var weatherAPI = JSON.parse(body);
-
-                    //Print the data
-                    builder.Prompts.text(session,'In ' + weatherAPI.name + ' the cloudiness is ' + weatherAPI.clouds.all + '%, and it is ' + weatherAPI.main.temp + ' degrees.');
-
+                    // Tells the user about the weather and the current temperature
+                    builder.Prompts.text(session,'In ' + weatherAPI.name + ' the weather is ' + weatherAPI.weather[0].main + ', is decribed as ' + weatherAPI.weather[0].description + ', and it is ' + weatherAPI.main.temp + ' degrees.');
+                    // This ends this dialog so the bot can loop to ask the user about if they want to know another city's weather
+                    session.endDialog();
+                    session.beginDialog('weatherbot', session.userData.profile);
                     } catch(error) {
-                        //Parse error
+                        // Catches errors so they can be printed to the console
                         printError(error);
                     }
                 } else  {
-                    //Status Code error
+                    // Error reached if the API call fails
+                    builder.Prompts.text(session,'Error');
                     printError({message: 'There was an error getting the weather from ' + city + '. (' + http.STATUS_CODES[response.statusCode] + ')'});
                 }
             });   
         });
     },
-
-    
-
-
-//Left over logging in function from another bot, may be useful later on
-
-    /*function (session, args, next) {
-        session.dialogData.profile = args || {}; // Set the profile or create the object.
-        if (!session.dialogData.profile.name) {
-            builder.Prompts.text(session, "What's your name?");
-        } else {
-            next(); // Skip if we already have this info.
-        }
-    },
-    function (session, results, next) {
-        if (results.response) {
-            // Save user's name if we asked for it.
-            session.dialogData.profile.name = results.response;
-        }
-        if (!session.dialogData.profile.company) {
-            builder.Prompts.text(session, "What company do you work for?");
-        } else {
-            next(); // Skip if we already have this info.
-        }
-    },
-    function (session, results) {
-        if (results.response) {
-            // Save company name if we asked for it.
-            session.dialogData.profile.company = results.response;
-        }
-        session.endDialogWithResult({ response: session.dialogData.profile });
-    }*/
 ]);
 
-function printError(error) {
-        console.error(error.message);
-    };
